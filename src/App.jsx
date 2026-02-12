@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Course from "./pages/Course";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/organization" element={<Organization />} />
+            <Route path="/courses/:courseId" element={<Course />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
