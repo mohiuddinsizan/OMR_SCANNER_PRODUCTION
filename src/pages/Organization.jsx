@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Organization.css";
+import TemplatesManage from "../components/org/TemplatesManage";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -65,22 +66,39 @@ function Toast({ message, type, onClose }) {
       <div className="org-toast-icon">
         {type === "success" ? (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" fill="currentColor"/>
+            <path
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              fill="currentColor"
+            />
           </svg>
         ) : (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" fill="currentColor"/>
+            <path
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              fill="currentColor"
+            />
           </svg>
         )}
       </div>
       <span className="org-toast-message">{message}</span>
-      <button className="org-toast-close" onClick={onClose}>×</button>
+      <button className="org-toast-close" onClick={onClose}>
+        ×
+      </button>
     </div>
   );
 }
 
 // Confirmation Modal Component
-function ConfirmModal({ isOpen, title, message, confirmText = "Confirm", cancelText = "Cancel", onConfirm, onCancel, danger = false }) {
+function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  onConfirm,
+  onCancel,
+  danger = false,
+}) {
   if (!isOpen) return null;
 
   return (
@@ -89,19 +107,35 @@ function ConfirmModal({ isOpen, title, message, confirmText = "Confirm", cancelT
         <div className="org-confirm-icon">
           {danger ? (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           ) : (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           )}
         </div>
         <h3 className="org-confirm-title">{title}</h3>
         <p className="org-confirm-message">{message}</p>
         <div className="org-confirm-actions">
-          <button className="org-btn org-btn-ghost" onClick={onCancel}>{cancelText}</button>
-          <button className={`org-btn ${danger ? 'org-btn-danger' : 'org-btn-primary'}`} onClick={onConfirm}>{confirmText}</button>
+          <button className="org-btn org-btn-ghost" onClick={onCancel}>
+            {cancelText}
+          </button>
+          <button className={`org-btn ${danger ? "org-btn-danger" : "org-btn-primary"}`} onClick={onConfirm}>
+            {confirmText}
+          </button>
         </div>
       </div>
     </div>
@@ -181,9 +215,7 @@ export default function Organization() {
     return sorted;
   }, [courses]);
 
-  const displayedCourses = showAllCourses 
-    ? sortedCourses 
-    : sortedCourses.slice(0, INITIAL_COURSE_LIMIT);
+  const displayedCourses = showAllCourses ? sortedCourses : sortedCourses.slice(0, INITIAL_COURSE_LIMIT);
 
   const hasMoreCourses = courses.length > INITIAL_COURSE_LIMIT;
 
@@ -566,15 +598,17 @@ export default function Organization() {
               <div>
                 <h1 className="org-hero-title">
                   {isGuestUser ? (
-                    <>Join an <span className="org-gradient-text">Organization</span></>
+                    <>
+                      Join an <span className="org-gradient-text">Organization</span>
+                    </>
                   ) : (
-                    <>Manage Your <span className="org-gradient-text">Courses</span></>
+                    <>
+                      Manage Your <span className="org-gradient-text">Courses</span>
+                    </>
                   )}
                 </h1>
                 <p className="org-hero-subtitle">
-                  {isGuestUser
-                    ? "You're currently a guest. Buy subscription or accept an invitation."
-                    : "Create and manage courses. Owner can manage members."}
+                  {isGuestUser ? "You're currently a guest. Buy subscription or accept an invitation." : "Create and manage courses. Owner can manage members."}
                 </p>
               </div>
 
@@ -614,12 +648,24 @@ export default function Organization() {
               <button className={`org-tab ${activeTab === "courses" ? "active" : ""}`} type="button" onClick={() => setActiveTab("courses")}>
                 Courses
               </button>
+
               <button className={`org-tab ${activeTab === "users" ? "active" : ""}`} type="button" onClick={() => setActiveTab("users")}>
                 User Manage {pendingInviteCount > 0 && <span className="org-tab-badge">{pendingInviteCount}</span>}
+              </button>
+
+              <button className={`org-tab ${activeTab === "templates" ? "active" : ""}`} type="button" onClick={() => setActiveTab("templates")}>
+                Template Manage
               </button>
             </div>
           </div>
         </div>
+
+        {/* TEMPLATES TAB */}
+        {activeTab === "templates" && (
+          <div className="org-section org-section-full">
+            <TemplatesManage user={user} showToast={showToast} />
+          </div>
+        )}
 
         {/* COURSES TAB */}
         {activeTab === "courses" && (
@@ -696,22 +742,25 @@ export default function Organization() {
                     <div>
                       <h2 className="org-section-title">All Courses</h2>
                       <p className="org-section-subtitle">
-                        {loadingCourses ? "Loading..." : `${showAllCourses ? 'Showing all' : 'Showing recent'} ${displayedCourses.length} of ${courses.length} course(s)`}
+                        {loadingCourses
+                          ? "Loading..."
+                          : `${showAllCourses ? "Showing all" : "Showing recent"} ${displayedCourses.length} of ${courses.length} course(s)`}
                       </p>
                     </div>
                     <div className="org-section-header-actions">
                       {hasMoreCourses && (
-                        <button 
-                          className="org-btn org-btn-secondary org-btn-sm" 
-                          type="button" 
-                          onClick={() => setShowAllCourses(!showAllCourses)}
-                        >
-                          {showAllCourses ? 'Show Recent' : 'Show All Courses'}
+                        <button className="org-btn org-btn-secondary org-btn-sm" type="button" onClick={() => setShowAllCourses(!showAllCourses)}>
+                          {showAllCourses ? "Show Recent" : "Show All Courses"}
                         </button>
                       )}
                       <button className="org-btn org-btn-ghost org-btn-sm" type="button" onClick={loadCourses} disabled={loadingCourses}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
                         </svg>
                         Refresh
                       </button>
@@ -727,7 +776,12 @@ export default function Organization() {
                     <div className="org-empty-state">
                       <div className="org-empty-icon">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                          />
                         </svg>
                       </div>
                       <h3>No Courses Yet</h3>
@@ -747,7 +801,12 @@ export default function Organization() {
                                   <div className="org-course-header">
                                     <div className="org-course-icon">
                                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                                        />
                                       </svg>
                                     </div>
                                   </div>
@@ -812,11 +871,7 @@ export default function Organization() {
 
                       {hasMoreCourses && !showAllCourses && (
                         <div className="org-show-more-container">
-                          <button 
-                            className="org-btn org-btn-ghost org-btn-large" 
-                            type="button" 
-                            onClick={() => setShowAllCourses(true)}
-                          >
+                          <button className="org-btn org-btn-ghost org-btn-large" type="button" onClick={() => setShowAllCourses(true)}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                             </svg>
@@ -1031,7 +1086,7 @@ export default function Organization() {
                 </div>
                 <button className="org-modal-close" type="button" onClick={closeInvite}>
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                 </button>
               </div>

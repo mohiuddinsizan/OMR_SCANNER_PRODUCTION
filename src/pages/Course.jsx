@@ -1,55 +1,10 @@
+// src/pages/Course.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import "../styles/Course.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-
-function getToken() {
-  return localStorage.getItem("access_token");
-}
-
-async function apiFetch(path, { method = "GET", body, params } = {}) {
-  const token = getToken();
-
-  const url = new URL(API_BASE + path);
-  if (params) {
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
-    });
-  }
-
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  const isJson = res.headers.get("content-type")?.includes("application/json");
-  const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => null);
-
-  if (!res.ok) {
-    let msg = `Request failed: ${res.status}`;
-
-    if (data && typeof data === "object") {
-      if (typeof data.detail === "string") msg = data.detail;
-      else if (Array.isArray(data.detail)) msg = data.detail.map((d) => d?.msg || JSON.stringify(d)).join(", ");
-      else if (typeof data.message === "string") msg = data.message;
-      else msg = JSON.stringify(data);
-    } else if (typeof data === "string" && data.trim()) {
-      msg = data;
-    }
-
-    const err = new Error(msg);
-    err.status = res.status;
-    err.data = data;
-    throw err;
-  }
-
-  return data;
-}
+import api from "../lib/api";
+import ExamsSection from "../components/exams/ExamsSection";
 
 // ---------- Toast ----------
 function Toast({ message, type, onClose }) {
@@ -119,10 +74,6 @@ export default function Course() {
   const [course, setCourse] = useState(null);
   const [loadingCourse, setLoadingCourse] = useState(true);
 
-  // Exams (dummy data for now)
-  const [exams, setExams] = useState([]);
-  const [loadingExams, setLoadingExams] = useState(true);
-
   // Students
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
@@ -171,11 +122,22 @@ export default function Course() {
     });
   }
 
+  // ---------------- helpers ----------------
+  function errMsg(err, fallback = "Request failed.") {
+    // axios errors
+    return (
+      err?.response?.data?.detail ||
+      err?.response?.data?.message ||
+      err?.message ||
+      fallback
+    );
+  }
+
   // ---------------- LOADERS ----------------
   async function loadCourse() {
     setLoadingCourse(true);
     try {
-      const data = await apiFetch(`/courses/${courseId}`);
+      const { data } = await api.get(`/courses/${courseId}`);
       setCourse(data);
     } catch {
       setCourse(null);
@@ -184,26 +146,10 @@ export default function Course() {
     }
   }
 
-  async function loadExams() {
-    setLoadingExams(true);
-    try {
-      // TODO: Replace with real backend endpoint later
-      setExams([
-        { id: "d1", name: "Midterm 1", exam_at: "2026-02-01", is_locked: false, batch_name: "Batch A" },
-        { id: "d2", name: "Model Test", exam_at: "2026-02-05", is_locked: true, batch_name: "Batch B" },
-        { id: "d3", name: "Final", exam_at: "2026-02-10", is_locked: false, batch_name: "" },
-      ]);
-    } catch {
-      setExams([]);
-    } finally {
-      setLoadingExams(false);
-    }
-  }
-
   async function loadStudents() {
     setLoadingStudents(true);
     try {
-      const data = await apiFetch(`/students/course/${courseId}`, {
+      const { data } = await api.get(`/students/course/${courseId}`, {
         params: {
           skip: 0,
           limit: 1000,
@@ -214,7 +160,7 @@ export default function Course() {
       setStudents(Array.isArray(data) ? data : []);
     } catch (e) {
       setStudents([]);
-      showToast(e.message || "Failed to load students.", "error");
+      showToast(errMsg(e, "Failed to load students."), "error");
     } finally {
       setLoadingStudents(false);
     }
@@ -224,7 +170,6 @@ export default function Course() {
     document.title = "Course — Scanova";
     if (!courseId) return;
     loadCourse();
-    loadExams();
     loadStudents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
@@ -269,12 +214,12 @@ export default function Course() {
         extra_details: createForm.extra_details || {},
       };
 
-      const created = await apiFetch("/students/", { method: "POST", body: payload });
+      const { data: created } = await api.post("/students/", payload);
       setStudents((p) => [created, ...p]);
       showToast("Student added.");
       closeCreateStudent();
     } catch (e2) {
-      showToast(e2.message || "Failed to add student.", "error");
+      showToast(errMsg(e2, "Failed to add student."), "error");
     } finally {
       setCreating(false);
     }
@@ -314,13 +259,13 @@ export default function Course() {
         return;
       }
 
-      const updated = await apiFetch(`/students/${studentId}`, { method: "PATCH", body: payload });
+      const { data: updated } = await api.patch(`/students/${studentId}`, payload);
       setStudents((p) => p.map((x) => (x.id === studentId ? updated : x)));
       setEditingId(null);
       setEditForm({});
       showToast("Student updated.");
     } catch (e) {
-      showToast(e.message || "Failed to update student.", "error");
+      showToast(errMsg(e, "Failed to update student."), "error");
     } finally {
       setSavingEdit(false);
     }
@@ -337,47 +282,13 @@ export default function Course() {
     if (!ok) return;
 
     try {
-      await apiFetch(`/students/${studentId}`, { method: "DELETE" });
+      await api.delete(`/students/${studentId}`);
       setStudents((p) => p.filter((x) => x.id !== studentId));
       showToast("Student deleted.");
     } catch (e) {
-      showToast(e.message || "Failed to delete student.", "error");
+      showToast(errMsg(e, "Failed to delete student."), "error");
     }
   }
-
-  // ---------------- EXAMS ACTIONS (IMPLEMENT LATER) ----------------
-  function addExamDummy() {
-    showToast("Add Exam will be implemented later.", "error");
-  }
-
-  function openExamDummy(examId) {
-    showToast(`Open exam (${examId}) — coming soon.`, "error");
-  }
-
-  function editExamDummy(examId) {
-    showToast(`Edit exam (${examId}) — coming soon.`, "error");
-  }
-
-  async function deleteExamDummy(examId) {
-    const ok = await showConfirm({
-      title: "Delete Exam",
-      message: "Delete exam feature will be implemented later. Continue?",
-      confirmText: "Ok",
-      cancelText: "Cancel",
-      danger: true,
-    });
-    if (!ok) return;
-    showToast(`Delete exam (${examId}) — coming soon.`, "error");
-  }
-
-  const sortedExams = useMemo(() => {
-    const arr = Array.isArray(exams) ? [...exams] : [];
-    arr.sort((a, b) => new Date(b.exam_at || 0) - new Date(a.exam_at || 0));
-    return arr;
-  }, [exams]);
-
-  const effectiveCourseName = course?.name || "Course";
-  const effectiveCourseSubtitle = course?.description || `Course ID: ${courseId}`;
 
   // ---------- Bulk Upload (dummy) ----------
   function bulkUploadDummy() {
@@ -391,6 +302,9 @@ export default function Course() {
   function clearBulkFile() {
     setBulkFile(null);
   }
+
+  const effectiveCourseName = course?.name || "Course";
+  const effectiveCourseSubtitle = course?.description || `Course ID: ${courseId}`;
 
   return (
     <div className="course-page">
@@ -414,11 +328,17 @@ export default function Course() {
                 {loadingCourse ? "Loading..." : effectiveCourseName}
                 <span className="course-gradient">.</span>
               </h1>
-              <p className="course-subtitle">{loadingCourse ? "Fetching course info..." : effectiveCourseSubtitle}</p>
+              <p className="course-subtitle">
+                {loadingCourse ? "Fetching course info..." : effectiveCourseSubtitle}
+              </p>
             </div>
 
             <div className="course-hero-actions">
-              <button className="course-btn course-btn-ghost" type="button" onClick={() => (window.location.href = "/organization")}>
+              <button
+                className="course-btn course-btn-ghost"
+                type="button"
+                onClick={() => (window.location.href = "/organization")}
+              >
                 ← Back to Organization
               </button>
             </div>
@@ -426,7 +346,11 @@ export default function Course() {
 
           {/* TABS */}
           <div className="course-tabs">
-            <button className={`course-tab ${activeTab === "exams" ? "active" : ""}`} type="button" onClick={() => setActiveTab("exams")}>
+            <button
+              className={`course-tab ${activeTab === "exams" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("exams")}
+            >
               Exams
             </button>
             <button
@@ -449,78 +373,7 @@ export default function Course() {
 
         {/* EXAMS TAB */}
         {activeTab === "exams" && (
-          <div className="course-section">
-            <div className="course-section-header">
-              <div>
-                <h2 className="course-section-title">All Exams</h2>
-                <p className="course-section-subtitle">
-                  {loadingExams ? "Loading exams..." : `${sortedExams.length} exam(s) in this course`}
-                </p>
-              </div>
-
-              <div className="course-inline-actions">
-                <button className="course-btn course-btn-primary" type="button" onClick={addExamDummy}>
-                  + Add New Exam
-                </button>
-                <button className="course-btn course-btn-ghost" type="button" onClick={loadExams} disabled={loadingExams}>
-                  Refresh
-                </button>
-              </div>
-            </div>
-
-            {loadingExams ? (
-              <div className="course-loading">
-                <div className="course-spinner" />
-                <p>Loading exams...</p>
-              </div>
-            ) : sortedExams.length === 0 ? (
-              <div className="course-empty">
-                <h3>No exams yet</h3>
-                <p>Click “Add New Exam” to create your first exam.</p>
-              </div>
-            ) : (
-              <div className="course-exams-grid">
-                {sortedExams.map((ex, idx) => {
-                  const colorIndex = idx % 6;
-                  return (
-                    <div key={ex.id} className={`course-exam-card course-color-${colorIndex}`}>
-                      <div className="course-exam-top">
-                        <div className="course-exam-title">{ex.name || "Untitled Exam"}</div>
-                        {ex.is_locked ? (
-                          <span className="course-pill course-pill-locked">LOCKED</span>
-                        ) : (
-                          <span className="course-pill">ACTIVE</span>
-                        )}
-                      </div>
-
-                      <div className="course-exam-meta">
-                        <div className="course-exam-row">
-                          <span className="course-label">Exam Date</span>
-                          <span className="course-value">{ex.exam_at ? new Date(ex.exam_at).toLocaleString() : "—"}</span>
-                        </div>
-                        <div className="course-exam-row">
-                          <span className="course-label">Batch</span>
-                          <span className="course-value">{ex.batch_name || "—"}</span>
-                        </div>
-                      </div>
-
-                      <div className="course-exam-actions">
-                        <button className="course-btn course-btn-primary course-btn-sm" type="button" onClick={() => openExamDummy(ex.id)}>
-                          Open
-                        </button>
-                        <button className="course-btn course-btn-secondary course-btn-sm" type="button" onClick={() => editExamDummy(ex.id)}>
-                          Edit
-                        </button>
-                        <button className="course-btn course-btn-danger course-btn-sm" type="button" onClick={() => deleteExamDummy(ex.id)}>
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <ExamsSection courseId={courseId} showToast={showToast} showConfirm={showConfirm} />
         )}
 
         {/* STUDENTS TAB */}
@@ -538,7 +391,12 @@ export default function Course() {
                 <button className="course-btn course-btn-primary" type="button" onClick={openCreateStudent}>
                   + Add Student
                 </button>
-                <button className="course-btn course-btn-ghost" type="button" onClick={loadStudents} disabled={loadingStudents}>
+                <button
+                  className="course-btn course-btn-ghost"
+                  type="button"
+                  onClick={loadStudents}
+                  disabled={loadingStudents}
+                >
                   Refresh
                 </button>
               </div>
@@ -564,12 +422,16 @@ export default function Course() {
                   placeholder="e.g. HSC 2024 Evening"
                 />
               </div>
-              <button className="course-btn course-btn-secondary" type="button" onClick={() => setFilters({ roll: "", batch_name: "" })}>
+              <button
+                className="course-btn course-btn-secondary"
+                type="button"
+                onClick={() => setFilters({ roll: "", batch_name: "" })}
+              >
                 Clear
               </button>
             </div>
 
-            {/* Bulk upload (dummy UI) - FIXED FILE INPUT UI */}
+            {/* Bulk upload (dummy UI) */}
             <div className="course-bulk-card">
               <div>
                 <h3 className="course-bulk-title">Bulk Add Students (Excel)</h3>
@@ -655,7 +517,11 @@ export default function Course() {
                           <div className="course-edit-grid">
                             <div>
                               <label className="course-label">Roll *</label>
-                              <input className="course-input" value={editForm.roll ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, roll: e.target.value }))} />
+                              <input
+                                className="course-input"
+                                value={editForm.roll ?? ""}
+                                onChange={(e) => setEditForm((p) => ({ ...p, roll: e.target.value }))}
+                              />
                             </div>
                             <div>
                               <label className="course-label">Registration</label>
@@ -667,7 +533,11 @@ export default function Course() {
                             </div>
                             <div>
                               <label className="course-label">Phone</label>
-                              <input className="course-input" value={editForm.phone ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
+                              <input
+                                className="course-input"
+                                value={editForm.phone ?? ""}
+                                onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))}
+                              />
                             </div>
                             <div>
                               <label className="course-label">Guardian Phone</label>
@@ -728,23 +598,49 @@ export default function Course() {
                     <div className="course-edit-grid">
                       <div>
                         <label className="course-label">Roll *</label>
-                        <input className="course-input" value={createForm.roll} onChange={(e) => setCreateForm((p) => ({ ...p, roll: e.target.value }))} disabled={creating} autoFocus />
+                        <input
+                          className="course-input"
+                          value={createForm.roll}
+                          onChange={(e) => setCreateForm((p) => ({ ...p, roll: e.target.value }))}
+                          disabled={creating}
+                          autoFocus
+                        />
                       </div>
                       <div>
                         <label className="course-label">Registration</label>
-                        <input className="course-input" value={createForm.registration} onChange={(e) => setCreateForm((p) => ({ ...p, registration: e.target.value }))} disabled={creating} />
+                        <input
+                          className="course-input"
+                          value={createForm.registration}
+                          onChange={(e) => setCreateForm((p) => ({ ...p, registration: e.target.value }))}
+                          disabled={creating}
+                        />
                       </div>
                       <div>
                         <label className="course-label">Phone</label>
-                        <input className="course-input" value={createForm.phone} onChange={(e) => setCreateForm((p) => ({ ...p, phone: e.target.value }))} disabled={creating} />
+                        <input
+                          className="course-input"
+                          value={createForm.phone}
+                          onChange={(e) => setCreateForm((p) => ({ ...p, phone: e.target.value }))}
+                          disabled={creating}
+                        />
                       </div>
                       <div>
                         <label className="course-label">Guardian Phone</label>
-                        <input className="course-input" value={createForm.guardian_phone} onChange={(e) => setCreateForm((p) => ({ ...p, guardian_phone: e.target.value }))} disabled={creating} />
+                        <input
+                          className="course-input"
+                          value={createForm.guardian_phone}
+                          onChange={(e) => setCreateForm((p) => ({ ...p, guardian_phone: e.target.value }))}
+                          disabled={creating}
+                        />
                       </div>
                       <div>
                         <label className="course-label">Batch Name</label>
-                        <input className="course-input" value={createForm.batch_name} onChange={(e) => setCreateForm((p) => ({ ...p, batch_name: e.target.value }))} disabled={creating} />
+                        <input
+                          className="course-input"
+                          value={createForm.batch_name}
+                          onChange={(e) => setCreateForm((p) => ({ ...p, batch_name: e.target.value }))}
+                          disabled={creating}
+                        />
                       </div>
                     </div>
 
@@ -763,15 +659,13 @@ export default function Course() {
           </div>
         )}
 
-        {/* LEADERBOARD TAB (IMPLEMENT LATER) */}
+        {/* LEADERBOARD TAB */}
         {activeTab === "leaderboard" && (
           <div className="course-section">
             <div className="course-section-header">
               <div>
                 <h2 className="course-section-title">Leaderboard</h2>
-                <p className="course-section-subtitle">
-                  Combined results of all exams in this course (coming soon).
-                </p>
+                <p className="course-section-subtitle">Combined results of all exams in this course (coming soon).</p>
               </div>
               <div className="course-inline-actions">
                 <button className="course-btn course-btn-ghost" type="button" onClick={() => showToast("Leaderboard will be implemented later.", "error")}>
@@ -782,9 +676,7 @@ export default function Course() {
 
             <div className="course-empty">
               <h3>Not implemented yet</h3>
-              <p>
-                When you give exam + scan evaluation endpoints, we will show: Total marks, average, rank, and batch filters here.
-              </p>
+              <p>When you give exam + scan evaluation endpoints, we will show: Total marks, average, rank, and batch filters here.</p>
             </div>
           </div>
         )}

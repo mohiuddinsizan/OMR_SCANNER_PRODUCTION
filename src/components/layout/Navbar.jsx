@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import logo from "/logo.png";
+import logo from "/logo1.png";
 import "../../styles/Navbar.css";
 
 export default function Navbar() {
